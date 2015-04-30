@@ -2769,7 +2769,13 @@ function _select_Gateway() { // Check for Gateway used to
             return profile.profileName == settings[prof.taskListName + charcurrent + '_profile'];
         });
         console.log('Selecting profile: ' + profiles[0].profileName);
-        var list = profiles[0].level[level];
+        var list;
+        for (var j = level; j >= 0; j--) {
+            if (profiles[0].level[j]) {
+                list = profiles[0].level[j];
+                break;
+            }
+        }
         if (list.length <= i) {
             console.log("Nothing Found");
             switchChar();
