@@ -329,6 +329,45 @@ var fouxConsole = {
     timeEnd: function() {}
 
 };
+
+var settingsStorage = {
+    opened : false,
+    init: function () {
+        this.opened = false;
+    },
+    open: function () {
+        if (this.opened) {
+            console.log("Storage WARNING: Opening of open database. Missing close()?");
+        }
+        this.opened = true;
+    },
+    close: function () {
+        if (!this.opened) {
+            console.log("Storage WARNING: Closing of closed database.");
+        }
+        this.opened = false;
+    },
+    load: function (name, def) {
+        if (!this.opened) {
+            console.log("Storage ERROR: Reading from unopened database");
+        }
+        return GM_getValue(name, def);
+    },
+    save: function (name, value) {
+        if (!this.opened) {
+            console.log("Storage ERROR: Writing to unopened database");
+        }
+        GM_setValue(name, value);
+    },
+    clean: function() {
+        var keys = GM_listValues();
+        for (i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            GM_deleteValue(key);
+        }
+    },
+};
+
 var console = unsafeWindow.console || fouxConsole;
 var chardiamonds = {};
 var zexdiamonds = 0;
@@ -2424,18 +2463,20 @@ function _select_Gateway() { // Check for Gateway used to
 
     // Load local settings cache (unsecured)
     var settings = {};
+    settingsStorage.open();
     for (var i = 0; i < settingnames.length; i++) {
         // Ignore label types
         if (settingnames[i].type === 'label') {
             continue;
         }
-        settings[settingnames[i].name] = GM_getValue(settingnames[i].name, settingnames[i].def);
+        settings[settingnames[i].name] = settingsStorage.load(settingnames[i].name, settingnames[i].def);
         // call the onsave for the setting if it exists
         if (typeof(settingnames[i].onsave) === "function") {
             console.log("Calling 'onsave' for", settingnames[i].name);
             settingnames[i].onsave(settings[settingnames[i].name], settings[settingnames[i].name]);
         }
     }
+    settingsStorage.close();
 
     var delay_modifier = parseFloat(settings["incdelay"]);
     delay.SHORT *= delay_modifier;
@@ -2521,12 +2562,14 @@ function _select_Gateway() { // Check for Gateway used to
             pane: "settings"
         });
     }
-
+    
+    settingsStorage.open();
     for (var i = 0; i < charSettings.length; i++) {
-        settings[charSettings[i].name] = GM_getValue(charSettings[i].name, charSettings[i].def);
+        settings[charSettings[i].name] = settingsStorage.load(charSettings[i].name, charSettings[i].def);
     }
+    settingsStorage.close();
     /*
-    var refineCounters = JSON.parse(GM_getValue("refineCounters", "{}"));
+    var refineCounters = JSON.parse(settingsStorage.load("refineCounters", "{}"));
     if (!refineCounters) {
         console.log('refineCounters couldn\'t be retrieved, reseting.');
         refineCounters = {};
@@ -3719,7 +3762,9 @@ function _select_Gateway() { // Check for Gateway used to
                 }
             });
 
-        GM_setValue("chars__statistics__" + _curCharName, JSON.stringify(charStatisticsList[_curCharName]));
+        settingsStorage.open();
+        settingsStorage.save("chars__statistics__" + _curCharName, JSON.stringify(charStatisticsList[_curCharName]));
+        settingsStorage.close();
         updateCounters(false);
 
 
@@ -3775,7 +3820,9 @@ function _select_Gateway() { // Check for Gateway used to
 
         console.log("Next run for " + settings["nw_charname" + charcurrent] + " in " + parseInt(chardelay / 1000) + " seconds.");
         $("#prinfopane").empty().append("<h3 class='promo-image copy-top prh3'>Professions Robot<br />Next task for " + settings["nw_charname" + charcurrent] + "<br /><span data-timer='" + chardate + "' data-timer-length='2'></span><br />Diamonds: " + curdiamonds.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "<br />Gold: " + curgold + "</h3>");
-        GM_setValue("charcurrent", charcurrent);
+        settingsStorage.open();
+        settingsStorage.save("charcurrent", charcurrent);
+        settingsStorage.close();
         dfdNextRun.resolve(chardelay);
     }
     /**
@@ -3926,7 +3973,9 @@ function _select_Gateway() { // Check for Gateway used to
 
                 var tempAccountSetting;
                 try {
-                    tempAccountSetting = JSON.parse(GM_getValue("account__settings__" + accountName, "{}"));
+                    settingsStorage.open();
+                    tempAccountSetting = JSON.parse(settingsStorage.load("account__settings__" + accountName, "{}"));
+                    settingsStorage.close();
                 } catch (e) {
                     tempAccountSetting = null;
                 }
@@ -3948,7 +3997,9 @@ function _select_Gateway() { // Check for Gateway used to
 
                     var tempCharsSetting;
                     try {
-                        tempCharsSetting = JSON.parse(GM_getValue("chars__settings__" + charName, "{}"));
+                        settingsStorage.open();
+                        tempCharsSetting = JSON.parse(settingsStorage.load("chars__settings__" + charName, "{}"));
+                        settingsStorage.close();
                     } catch (e) {
                         tempCharsSetting = null;
                     }
@@ -3962,7 +4013,9 @@ function _select_Gateway() { // Check for Gateway used to
                     console.log("Loading saved statistics for " + charName);
                     var tempCharsStatistics;
                     try {
-                        tempCharsStatistics = JSON.parse(GM_getValue("chars__statistics__" + charName, "{}"));
+                        settingsStorage.open();
+                        tempCharsStatistics = JSON.parse(settingsStorage.load("chars__statistics__" + charName, "{}"));
+                        settingsStorage.close();
                     } catch (e) {
                         tempCharsStatistics = null;
                     }
@@ -3975,12 +4028,14 @@ function _select_Gateway() { // Check for Gateway used to
                 })
 
                 updateCounters(false); // updating the UI from saved list
-                //if (JSON.stringify(accountSettings) !== GM_getValue("account_settings_" + accountName)) GM_setValue("account_settings_" + accountName, JSON.stringify(accountSettings));
-                //if (JSON.stringify(charSettingsTest) !== GM_getValue("chars_settings_" + accountName)) GM_setValue("chars_settings_" + accountName, JSON.stringify(charSettingsTest));
+                //if (JSON.stringify(accountSettings) !== settingsStorage.load("account_settings_" + accountName)) settingsStorage.save("account_settings_" + accountName, JSON.stringify(accountSettings));
+                //if (JSON.stringify(charSettingsTest) !== settingsStorage.load("chars_settings_" + accountName)) settingsStorage.save("chars_settings_" + accountName, JSON.stringify(charSettingsTest));
             }
 
             // load current character position and values
-            charcurrent = GM_getValue("charcurrent", 0);
+            settingsStorage.open();
+            charcurrent = settingsStorage.load("charcurrent", 0);
+            settingsStorage.close();
             for (var i = 0; i < (charSettings.length / settings["charcount"]); i++) {
                 j = i + (charcurrent * charSettings.length / settings["charcount"]);
                 settings[charSettings[j].name.replace(new RegExp(charcurrent + "$"), '')] = settings[charSettings[j].name];
@@ -4223,11 +4278,12 @@ function _select_Gateway() { // Check for Gateway used to
 
         $('#reset_settings_btn').button();
         $('#reset_settings_btn').click(function() {
-            var keys = GM_listValues();
-            for (i = 0; i < keys.length; i++) {
-                var key = keys[i];
-                GM_deleteValue(key);
-            }
+            settingsStorage.clean();
+            //var keys = GM_listValues();
+            //for (i = 0; i < keys.length; i++) {
+            //    var key = keys[i];
+            //    GM_deleteValue(key);
+            //}
             window.setTimeout(function() {
                 unsafeWindow.location.href = current_Gateway;
             }, delay.MINS);
@@ -4235,10 +4291,12 @@ function _select_Gateway() { // Check for Gateway used to
 
         $('#load_names_btn').button();
         $('#load_names_btn').click(function() {
-            GM_setValue("charcount", charNameList.length);
+            settingsStorage.open()
+            settingsStorage.save("charcount", charNameList.length);
             charNameList.forEach(function(name, i) {
-                GM_setValue("nw_charname" + i, name);
+                settingsStorage.save("nw_charname" + i, name);
             })
+            settingsStorage.close();
             window.setTimeout(function() {
                 unsafeWindow.location.href = current_Gateway;
             }, delay.MINS);
@@ -4513,7 +4571,9 @@ function _select_Gateway() { // Check for Gateway used to
         if (_action == "unpause")
             settings["paused"] = false;
         setTimeout(function() {
-            GM_setValue("paused", settings["paused"]);
+            settingsStorage.open();
+            settingsStorage.save("paused", settings["paused"]);
+            settingsStorage.close();
         }, 0);
         $("#settings_paused").prop("checked", settings["paused"]);
         $("#pauseButton img").attr("src", (settings["paused"] ? image_play : image_pause));
@@ -4524,13 +4584,15 @@ function _select_Gateway() { // Check for Gateway used to
         var charcount = settings["charcount"];
 
         // Delete all saved settings
-        var keys = GM_listValues();
-        for (i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            GM_deleteValue(key);
-        }
+        settingsStorage.clean();
+        //var keys = GM_listValues();
+        //for (i = 0; i < keys.length; i++) {
+        //    var key = keys[i];
+        //    GM_deleteValue(key);
+        //}
 
         // Get each value from the UI
+        settingsStorage.open();
         for (var i = 0; i < settingnames.length; i++) {
             var name = settingnames[i].name;
             var el = $('#settings_' + name);
@@ -4560,10 +4622,12 @@ function _select_Gateway() { // Check for Gateway used to
                 settings[name] = value;
             }
             // Save to GM cache
-            GM_setValue(name, value);
+            settingsStorage.save(name, value);
         }
+        settingsStorage.close();
 
         // Get character settings from UI
+        settingsStorage.open();
         for (var i = 0; i < charSettings.length; i++) {
             if (charSettings[i].type == 'void') {
                 continue;
@@ -4576,8 +4640,9 @@ function _select_Gateway() { // Check for Gateway used to
                 settings[name] = value;
             }
             // Save to GM cache
-            GM_setValue(name, value);
+            settingsStorage.save(name, value);
         }
+        settingsStorage.close();
 
         // If character numbers have changed reload page
         if (charcount != settings["charcount"]) {
