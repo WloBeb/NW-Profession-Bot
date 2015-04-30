@@ -734,15 +734,26 @@ function _select_Gateway() { // Check for Gateway used to
             return;
         }
         // expand task list
+        var prevLevel = createdProfile.level[1];
+        var currLevel;
         for (var i=2; i<=maxLevel; i++) {
             if (createdProfile.level[i] === undefined) {
-                createdProfile.level[i] = createdProfile.level[i-1];
+                // do nothing :D;
             } else {
-                for (var j=0; j<createdProfile.level[i-1].length; j++) {
-                    if (createdProfile.level[i].indexOf(createdProfile.level[i-1][j]) == -1) {
-                        createdProfile.level[i].push(createdProfile.level[i-1][j]);
+                currLevel = createdProfile.level[i];
+                var lastTask = currLevel[currLevel.length -1];
+                // if last task for current level == "+" add items from previous defined level
+                // I know it probably can be written more simply, but in javascript === or == for string doesn't work?
+                if ((lastTask.length === 1) && (lastTask[0] == '+')) {
+                    currLevel.splice(-1, 1);
+                    for (var j=0; j<prevLevel.length; j++) {
+                        if (currLevel.indexOf(prevLevel[j]) == -1) {
+                            currLevel.push(prevLevel[j]);
+                        }
                     }
                 }
+                prevLevel = currLevel;
+                createdProfile.level[i] = currLevel;
             }
         }
         profSet.profiles.push(createdProfile);
@@ -1063,9 +1074,9 @@ function _select_Gateway() { // Check for Gateway used to
         level : {
             0 : ["Jewelcrafting_Tier0_Intro"],
             1 : ["Jewelcrafting_Tier1_Refine_Basic_Mass", "Jewelcrafting_Tier1_Gather_Basic"],
-            7 : ["Jewelcrafting_Tier2_Refine_Basic_Mass"],
-            14 : ["Jewelcrafting_Tier3_Refine_Basic_Mass"],
-            21 : ["Jewelcrafting_Tier4_Refine_Basic_Mass"],
+            7 : ["Jewelcrafting_Tier2_Refine_Basic_Mass","+"],
+            14 : ["Jewelcrafting_Tier3_Refine_Basic_Mass","+"],
+            21 : ["Jewelcrafting_Tier4_Refine_Basic_Mass","+"],
         },
     });
 
